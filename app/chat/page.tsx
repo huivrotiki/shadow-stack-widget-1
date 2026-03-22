@@ -21,7 +21,7 @@ export default function ShadowStackDashboard() {
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (!input.trim()) return;
-    sendMessage({ prompt: input });
+    sendMessage({ parts: [{ type: 'text' as const, text: input }] });
     setInput('');
   };
   const [phases, setPhases] = useState<any[]>([]);
