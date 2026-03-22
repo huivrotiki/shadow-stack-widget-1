@@ -248,7 +248,7 @@ export default function ShadowStackDashboard() {
               key={m.id}
               className={`message ${m.role === 'user' ? 'user-message' : 'ai-message'}`}
             >
-              {m.content}
+              {m.parts?.filter((p: any) => p.type === 'text').map((p: any) => p.text).join('') ?? ''}
             </div>
           ))}
           <div ref={messagesEndRef}></div>
