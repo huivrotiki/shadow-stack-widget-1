@@ -8,10 +8,13 @@
     "api": "node server/index.js"
   },
   "dependencies": {
+    "@ai-sdk/openai": "^3.0.47",
     "@opencode-ai/sdk": "^1.2.27",
+    "ai": "^6.0.134",
     "express": "latest",
     "next": "latest",
     "react": "latest",
-    "react-dom": "latest"
+    "react-dom": "latest",
+    "zod": "^4.3.6"
   }
 }
