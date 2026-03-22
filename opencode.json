@@ -1,0 +1,21 @@
+{
+  "providers": {
+    "groq": { "apiKey": "GROQ_KEY" },
+    "openrouter": { "apiKey": "OPENROUTER_KEY" },
+    "local": { "baseUrl": "http://localhost:11434/v1" }
+  },
+  "models": {
+    "cheap-fast": {
+      "provider": "groq",
+      "name": "llama-3-8b"
+    },
+    "reasoning": {
+      "provider": "openrouter",
+      "name": "gpt-4.1-mini"
+    },
+    "offline": {
+      "provider": "local",
+      "name": "qwen:latest"
+    }
+  }
+}

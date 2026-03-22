@@ -8,9 +8,10 @@
     "api": "node server/index.js"
   },
   "dependencies": {
+    "@opencode-ai/sdk": "^1.2.27",
+    "express": "latest",
     "next": "latest",
     "react": "latest",
-    "react-dom": "latest",
-    "express": "latest"
+    "react-dom": "latest"
   }
 }
