@@ -2,6 +2,7 @@ import { z } from 'zod';
 import logger from '../logger.js';
 import {
   callOllama,
+  callAntigravityGemini,
   callOpenRouter,
   callPerplexity,
   callGrok,
@@ -9,6 +10,9 @@ import {
   callClaude,
   callVercelDeploy,
   checkOllamaHealth,
+  checkAntigravityHealth,
+  isQuotaExhausted,
+  getAllUsage,
   ProviderError,
 } from './providers.js';
 import { executeWithRetry, executeFallbackCascade } from './fallback.js';
@@ -28,6 +32,7 @@ export type RouteRequest = z.infer<typeof RouteRequestSchema>;
 export const ROUTE_NAMES = [
   'ollama-short',
   'ollama-analysis',
+  'antigravity-gemini',
   'openrouter-free',
   'perplexity',
   'grok',
@@ -80,11 +85,17 @@ function classifyRoute(input: RouteRequest): RouteClassification {
   }
 
   // 2. Length-based routing for plain text
-  if (input.text.length < 80) {
-    return { route: 'ollama-short', model: 'qwen2.5-coder:3b', provider: 'ollama' };
+  const ollamaRoute: RouteClassification = input.text.length < 80
+    ? { route: 'ollama-short', model: 'qwen2.5-coder:3b', provider: 'ollama' }
+    : { route: 'ollama-analysis', model: 'qwen2.5:7b', provider: 'ollama' };
+
+  // 3. Quota-aware: if Ollama quota exhausted, try Antigravity Gemini first
+  if (isQuotaExhausted('ollama')) {
+    logger.info('[AutoRouter] Ollama quota near limit, routing to Antigravity Gemini');
+    return { route: 'antigravity-gemini', model: 'gemini-2.0-flash', provider: 'antigravity' };
   }
 
-  return { route: 'ollama-analysis', model: 'qwen2.5:7b', provider: 'ollama' };
+  return ollamaRoute;
 }
 
 // --- Provider Executor ---
@@ -98,6 +109,8 @@ async function executeProvider(
       return callOllama('qwen2.5-coder:3b', prompt);
     case 'ollama-analysis':
       return callOllama('qwen2.5:7b', prompt);
+    case 'antigravity-gemini':
+      return callAntigravityGemini(prompt);
     case 'openrouter-free':
       return callOpenRouter('qwen/qwen-2.5-coder-32b-instruct', prompt);
     case 'perplexity':

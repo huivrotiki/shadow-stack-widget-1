@@ -62,6 +62,15 @@ app.post('/api/auto-router', async (req, res, next) => {
   }
 });
 
+app.get('/api/auto-router/usage', async (req, res, next) => {
+  try {
+    const { getAllUsage } = await import('./auto-router/index.js');
+    res.json({ status: 'ok', usage: getAllUsage() });
+  } catch (err) {
+    next(err);
+  }
+});
+
 app.post('/api/orchestrator/prompt', async (req, res, next) => {
   try {
     const { text, sessionId } = req.body;

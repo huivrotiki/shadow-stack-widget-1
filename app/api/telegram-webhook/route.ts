@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
 import { z } from 'zod';
-import { routeRequest } from '../../../server/auto-router/index.js';
+import { routeRequest, getAllUsage } from '../../../server/auto-router/index.js';
 
 // --- Zod Schemas ---
 
@@ -39,6 +39,8 @@ const HELP_TEXT = `🤖 *Shadow Stack Auto-Router*
 /grok — Grok AI
 /kimi — Kimi (Moonshot)
 /reset — сброс сессии
+/test-router — тест роутинга (показывает route без вызова LLM)
+/usage — текущие квоты провайдеров
 
 Обычный текст → автоматический роутинг:
 • < 80 символов → Ollama qwen2.5-coder:3b (локально)
@@ -120,6 +122,27 @@ export async function POST(req: Request) {
 
       case '/reset': {
         await sendTelegramMessage(chatId, '🔄 Сессия сброшена');
+        return NextResponse.json({ ok: true });
+      }
+
+      case '/test-router': {
+        const testPrompt = rest || 'test message';
+        const result = await routeRequest({
+          text: testPrompt,
+          sessionId: `tg-test-${chatId}`,
+        });
+        const msg = `🧪 *Test Router Result*\n\nInput: "${testPrompt}"\nRoute: ${result.route}\nModel: ${result.model}\nProvider: ${result.provider}\nStatus: ${result.status}\nTime: ${result.executionTimeMs}ms\nFallback: ${result.fallbackUsed}`;
+        await sendTelegramMessage(chatId, msg);
+        return NextResponse.json({ ok: true });
+      }
+
+      case '/usage': {
+        const usage = getAllUsage();
+        const lines = Object.entries(usage).map(([provider, data]) => {
+          const bar = '█'.repeat(Math.round(data.percent / 10)) + '░'.repeat(10 - Math.round(data.percent / 10));
+          return `${provider}: ${bar} ${data.count}/${data.limit} (${data.percent}%)`;
+        });
+        await sendTelegramMessage(chatId, `📊 *Provider Usage*\n\n${lines.join('\n')}`);
         return NextResponse.json({ ok: true });
       }
 

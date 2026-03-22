@@ -62,7 +62,100 @@ async function openAICompatibleCall(
   return data.choices?.[0]?.message?.content ?? '';
 }
 
+// --- Usage Tracking (in-memory, resets hourly) ---
+
+interface UsageEntry {
+  count: number;
+  resetAt: number;
+}
+
+const usageStore = new Map<string, UsageEntry>();
+
+const PROVIDER_LIMITS: Record<string, number> = {
+  ollama: Infinity,
+  antigravity: 50,    // Gemini free pool ~50 req/hr
+  openrouter: 100,    // OpenRouter free tier
+  perplexity: 30,     // Subscription tier
+  grok: 30,
+  kimi: 50,
+  claude: 20,         // Pay-per-use, keep low
+};
+
+export function trackUsage(provider: string): void {
+  const now = Date.now();
+  const entry = usageStore.get(provider);
+  if (!entry || now > entry.resetAt) {
+    usageStore.set(provider, { count: 1, resetAt: now + 3600_000 });
+  } else {
+    entry.count++;
+  }
+}
+
+export function getUsage(provider: string): { count: number; limit: number; percent: number } {
+  const entry = usageStore.get(provider);
+  const count = entry && Date.now() < entry.resetAt ? entry.count : 0;
+  const limit = PROVIDER_LIMITS[provider] ?? 100;
+  return { count, limit, percent: Math.round((count / limit) * 100) };
+}
+
+export function isQuotaExhausted(provider: string, threshold = 90): boolean {
+  const { percent } = getUsage(provider);
+  return percent >= threshold;
+}
+
+export function getAllUsage(): Record<string, { count: number; limit: number; percent: number }> {
+  const result: Record<string, { count: number; limit: number; percent: number }> = {};
+  for (const provider of Object.keys(PROVIDER_LIMITS)) {
+    result[provider] = getUsage(provider);
+  }
+  return result;
+}
+
 // --- Provider Functions ---
+
+export async function callAntigravityGemini(prompt: string): Promise<string> {
+  const endpoint = process.env.OPENCODE_ENDPOINT || 'http://localhost:3001';
+  const token = process.env.ANTIGRAVITY_OAUTH_TOKEN;
+
+  const headers: Record<string, string> = {
+    'Content-Type': 'application/json',
+  };
+  if (token) {
+    headers['Authorization'] = `Bearer ${token}`;
+  }
+
+  const res = await fetch(`${endpoint}/v1/chat/completions`, {
+    method: 'POST',
+    headers,
+    body: JSON.stringify({
+      model: 'gemini-2.0-flash',
+      messages: [{ role: 'user', content: prompt }],
+      max_tokens: 2048,
+    }),
+    signal: AbortSignal.timeout(30_000),
+  });
+
+  if (!res.ok) {
+    const body = await res.text().catch(() => '');
+    throw new ProviderError('antigravity', res.status, `Antigravity Gemini HTTP ${res.status}: ${body.slice(0, 200)}`);
+  }
+
+  const data = await res.json();
+  trackUsage('antigravity');
+  return data.choices?.[0]?.message?.content ?? '';
+}
+
+export async function checkAntigravityHealth(): Promise<boolean> {
+  try {
+    const endpoint = process.env.OPENCODE_ENDPOINT || 'http://localhost:3001';
+    const res = await fetch(`${endpoint}/v1/models`, {
+      signal: AbortSignal.timeout(2_000),
+    });
+    return res.ok;
+  } catch {
+    return false;
+  }
+}
 
 export async function callOllama(model: string, prompt: string): Promise<string> {
   const baseUrl = process.env.OLLAMA_BASE_URL || 'http://localhost:11434';
@@ -80,6 +173,7 @@ export async function callOllama(model: string, prompt: string): Promise<string>
   }
 
   const data = await res.json();
+  trackUsage('ollama');
   return data.response ?? '';
 }
 
@@ -97,13 +191,15 @@ export async function checkOllamaHealth(): Promise<boolean> {
 
 export async function callOpenRouter(model: string, prompt: string): Promise<string> {
   const apiKey = requireEnv('OPENROUTER_API_KEY');
-  return openAICompatibleCall(
+  const result = await openAICompatibleCall(
     'openrouter',
     'https://openrouter.ai/api/v1/chat/completions',
     apiKey,
     model,
     prompt,
   );
+  trackUsage('openrouter');
+  return result;
 }
 
 export async function callPerplexity(prompt: string): Promise<string> {
