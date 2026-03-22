@@ -1,4 +1,4 @@
-import { streamText } from 'ai';
+import { streamText, tool } from 'ai';
 import { createOpenAI } from '@ai-sdk/openai';
 import { z } from 'zod';
 
@@ -15,12 +15,12 @@ export async function POST(req: Request) {
     model: openai('gpt-4o-mini'),
     messages,
     tools: {
-      query_files: {
+      query_files: tool({
         description: 'Query the project file system for a specific pattern.',
-        parameters: z.object({
+        inputSchema: z.object({
           pattern: z.string().describe('The search pattern (e.g., "*.md", "app/api/*")'),
         }),
-        execute: async ({ pattern }) => {
+        execute: async ({ pattern }: { pattern: string }) => {
           const res = await fetch('http://localhost:3001/api/gitops', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
@@ -28,14 +28,14 @@ export async function POST(req: Request) {
           });
           return await res.json();
         },
-      },
-      create_commit: {
+      }),
+      create_commit: tool({
         description: 'Create a new git commit for the specified files.',
-        parameters: z.object({
+        inputSchema: z.object({
           message: z.string().describe('The commit message.'),
           files: z.string().optional().default('.').describe('The files to stage (default is ".")'),
         }),
-        execute: async ({ message, files }) => {
+        execute: async ({ message, files }: { message: string, files: string }) => {
           const res = await fetch('http://localhost:3001/api/gitops', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
@@ -43,7 +43,7 @@ export async function POST(req: Request) {
           });
           return await res.json();
         },
-      },
+      }),
     },
   });
 
