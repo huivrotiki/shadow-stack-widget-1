@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
 import { z } from 'zod';
-import { routeRequest, getAllUsage, metaEscalate } from '../../../server/auto-router/index.js';
+import { routeRequest, getAllUsage, metaEscalate } from '../../../server/auto-router/index';
 
 // --- Zod Schemas ---
 

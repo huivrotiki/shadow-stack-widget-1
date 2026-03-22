@@ -1,6 +1,6 @@
 import logger from '../logger.js';
-import { callPerplexity, callOpenRouter, ProviderError } from './providers.js';
-import { executeWithRetry } from './fallback.js';
+import { callPerplexity, callOpenRouter, ProviderError } from './providers';
+import { executeWithRetry } from './fallback';
 
 // --- Types ---
 

@@ -14,8 +14,8 @@ import {
   isQuotaExhausted,
   getAllUsage,
   ProviderError,
-} from './providers.js';
-import { executeWithRetry, executeFallbackCascade } from './fallback.js';
+} from './providers';
+import { executeWithRetry, executeFallbackCascade } from './fallback';
 
 // --- Zod Schemas ---
 

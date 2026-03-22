@@ -9,7 +9,7 @@ import {
   checkOllamaHealth,
   checkAntigravityHealth,
   isQuotaExhausted,
-} from './providers.js';
+} from './providers';
 
 export async function executeWithRetry<T>(
   fn: () => Promise<T>,
@@ -133,7 +133,7 @@ export async function executeFallbackCascade(
   // --- Meta-escalation: all providers failed ---
   logger.warn('[Fallback] All providers failed, triggering meta-escalation');
   try {
-    const { metaEscalate } = await import('./metaEscalate.js');
+    const { metaEscalate } = await import('./metaEscalate');
     const escalation = await metaEscalate(
       `All ${chain.length} providers failed for prompt: "${prompt.slice(0, 200)}...". ` +
       `Excluded route: ${excludeRoute ?? 'none'}. Cascade exhausted.`,
