@@ -1,38 +1,35 @@
-import { execSync } from 'child_process';
-import path from 'path';
-import fs from 'fs';
+import simpleGit from 'simple-git';
 
-/**
- * GitOps v2 Service (ESM)
- */
-class GitOpsService {
-  async queryFiles(pattern = '*') {
+const git = simpleGit();
+
+const gitops = {
+  async queryFiles(pattern) {
     try {
-      console.log(`[GitOps] Querying files with pattern: ${pattern}`);
-      const result = execSync(`find . -maxdepth 2 -not -path '*/.*' -name "${pattern}"`, {
-        cwd: process.cwd(),
-      }).toString().trim();
+      // Using git ls-files if it's tracked, but wait, pattern might mean just normal file query.
+      // The old version used `ls -R`. Let's use simple-git for git tracked files at least, or keep it generic for patterns.
+      // But queryFiles usually returns file tree. Since previous was `ls -R`, let's just stick to child_process for file queries, but simple-git for commits.
+      // Actually, simple-git doesn't do normal shell file tree.
+      // Let's use fs for query or stick to exec for arbitrary ls.
+      const { exec } = await import('child_process');
+      const util = await import('util');
+      const execPromise = util.promisify(exec);
       
-      const files = result.split('\n').filter(f => f && f !== '.');
-      return { status: 'success', files };
+      const { stdout } = await execPromise(`ls -R ${pattern || '.'}`);
+      return { status: 'success', data: stdout };
     } catch (err) {
-      return { status: 'failed', message: err.message };
+      return { status: 'error', error: err.message };
+    }
+  },
+
+  async createCommit(message, files) {
+    try {
+      await git.add(files);
+      const commitResult = await git.commit(message);
+      return { status: 'success', message, result: commitResult };
+    } catch (err) {
+      return { status: 'error', error: err.message };
     }
   }
+};
 
-  async createCommit(message, files = '.') {
-    try {
-      console.log(`[GitOps] Creating commit: "${message}"`);
-      execSync(`git add ${files}`, { cwd: process.cwd() });
-      const result = execSync(`git commit -m "${message}"`, { cwd: process.cwd() });
-      
-      const hash = execSync('git rev-parse HEAD', { cwd: process.cwd() }).toString().trim();
-      return { status: 'success', hash, log: result.toString().trim() };
-    } catch (err) {
-      return { status: 'failed', message: err.message };
-    }
-  }
-}
-
-const gitopsService = new GitOpsService();
-export default gitopsService;
+export default gitops;

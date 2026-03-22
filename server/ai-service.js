@@ -1,18 +1,15 @@
-/**
- * AI Service (ESM)
- */
 import { generateText } from 'ai';
-import { createOpenAI } from '@ai-sdk/openai';
+import { openai } from '@ai-sdk/openai';
 
 export async function generateGenericText(prompt) {
-  const openai = createOpenAI({
-    apiKey: process.env.OPENAI_API_KEY,
-  });
-
-  const { text } = await generateText({
-    model: openai('gpt-4o-mini'),
-    prompt: prompt,
-  });
-
-  return text;
+  try {
+    const { text } = await generateText({
+      model: openai('gpt-4o-mini'),
+      prompt: prompt,
+    });
+    return text;
+  } catch (err) {
+    console.error('AI SDK Error:', err);
+    return `Error: ${err.message}`;
+  }
 }

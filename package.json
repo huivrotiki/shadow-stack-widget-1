@@ -16,6 +16,8 @@
     "next": "latest",
     "react": "latest",
     "react-dom": "latest",
+    "simple-git": "^3.33.0",
+    "winston": "^3.19.0",
     "zod": "^4.3.6"
   }
 }
