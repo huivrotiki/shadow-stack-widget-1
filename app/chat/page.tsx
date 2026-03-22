@@ -1,14 +1,22 @@
 'use client';
 
 import { useChat } from 'ai/react';
-import React, { useEffect, useRef } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 
-/**
- * Premium Chat Interface for Shadow Stack Widget
- * Uses Vercel AI SDK hooks.
- */
-export default function ShadowStackChat() {
+declare global {
+  interface Window {
+    electronAPI: {
+      listPhases: () => Promise<any[]>;
+      runTask: (phaseId: number, taskId: string) => Promise<string>;
+      onLog: (callback: (data: { taskId: string; line: string; level?: string }) => void) => void;
+    };
+  }
+}
+
+export default function ShadowStackDashboard() {
   const { messages, input, handleInputChange, handleSubmit, isLoading } = useChat();
+  const [phases, setPhases] = useState<any[]>([]);
+  const [logs, setLogs] = useState<{ taskId: string; line: string; level?: string }[]>([]);
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
   const scrollToBottom = () => {
@@ -17,152 +25,245 @@ export default function ShadowStackChat() {
 
   useEffect(() => {
     scrollToBottom();
-  }, [messages]);
+  }, [messages, logs]);
+
+  useEffect(() => {
+    // Load initial phases
+    if (window.electronAPI) {
+      window.electronAPI.listPhases().then(setPhases);
+      window.electronAPI.onLog((data) => {
+        setLogs((prev) => [...prev.slice(-50), data]);
+      });
+    }
+  }, []);
+
+  const runTask = async (phaseId: number, taskId: string) => {
+    if (window.electronAPI) {
+      setLogs((prev) => [...prev, { taskId, line: `🚀 Starting task ${taskId}...` }]);
+      const result = await window.electronAPI.runTask(phaseId, taskId);
+      setLogs((prev) => [...prev, { taskId, line: `🏁 Task result: ${result}` }]);
+      // Refresh phases status
+      const updated = await window.electronAPI.listPhases();
+      setPhases(updated);
+    }
+  };
 
   return (
-    <div className="shadow-stack-container">
+    <div className="shadow-stack-layout">
       <style jsx>{`
-        .shadow-stack-container {
+        .shadow-stack-layout {
+          display: flex;
+          height: 100vh;
+          background: #020617;
+          color: #f8fafc;
+          font-family: 'Outfit', 'Inter', system-ui, sans-serif;
+        }
+
+        /* Sidebar for Orchestration */
+        .sidebar {
+          width: 350px;
+          background: rgba(15, 23, 42, 0.8);
+          backdrop-filter: blur(12px);
+          border-right: 1px solid rgba(51, 65, 85, 0.5);
           display: flex;
           flex-direction: column;
-          height: 100vh;
-          max-width: 800px;
-          margin: 0 auto;
-          background: #0f172a;
-          color: #f8fafc;
-          font-family: 'Inter', system-ui, sans-serif;
-          border: 1px solid #334155;
-          box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);
-          border-radius: 12px;
-          overflow: hidden;
-        }
-        .header {
           padding: 1.5rem;
-          background: linear-gradient(135deg, #1e293b, #0f172a);
-          border-bottom: 1px solid #334155;
+          overflow-y: auto;
+        }
+
+        .phase-card {
+          background: rgba(30, 41, 59, 0.5);
+          border: 1px solid rgba(51, 65, 85, 0.5);
+          border-radius: 12px;
+          padding: 1rem;
+          margin-bottom: 1rem;
+          transition: transform 0.2s, box-shadow 0.2s;
+        }
+
+        .phase-card:hover {
+          transform: translateY(-2px);
+          box-shadow: 0 10px 20px -10px rgba(0, 0, 0, 0.5);
+        }
+
+        .task-item {
           display: flex;
           justify-content: space-between;
           align-items: center;
+          padding: 0.5rem;
+          border-radius: 6px;
+          margin-top: 0.5rem;
+          background: rgba(15, 23, 42, 0.3);
+          font-size: 0.85rem;
         }
-        .status-dot {
-          width: 8px;
-          height: 8px;
-          background: ${isLoading ? '#38bdf8' : '#10b981'};
-          border-radius: 50%;
-          box-shadow: 0 0 10px ${isLoading ? '#38bdf8' : '#10b981'};
-          margin-right: 10px;
+
+        .btn-run {
+          background: #3b82f6;
+          color: white;
+          border: none;
+          padding: 4px 10px;
+          border-radius: 4px;
+          font-size: 0.75rem;
+          cursor: pointer;
         }
+
+        /* Main Chat Area */
+        .main-chat {
+          flex: 1;
+          display: flex;
+          flex-direction: column;
+          position: relative;
+        }
+
         .messages-container {
           flex: 1;
           overflow-y: auto;
-          padding: 1.5rem;
+          padding: 2rem;
           display: flex;
           flex-direction: column;
           gap: 1.5rem;
         }
+
         .message {
-          max-width: 85%;
-          padding: 1rem;
-          border-radius: 12px;
+          max-width: 80%;
+          padding: 1rem 1.25rem;
+          border-radius: 16px;
+          line-height: 1.6;
           font-size: 0.95rem;
-          line-height: 1.5;
         }
+
         .user-message {
           align-self: flex-end;
-          background: #2563eb;
+          background: linear-gradient(135deg, #3b82f6, #2563eb);
           color: white;
-          box-shadow: 0 4px 12px rgba(37, 99, 235, 0.3);
+          box-shadow: 0 8px 16px -4px rgba(37, 99, 235, 0.4);
         }
+
         .ai-message {
           align-self: flex-start;
-          background: #1e293b;
-          color: #f1f5f9;
-          border: 1px solid #334155;
-          backdrop-filter: blur(8px);
+          background: rgba(30, 41, 59, 0.7);
+          border: 1px solid rgba(51, 65, 85, 0.5);
+          backdrop-filter: blur(4px);
         }
-        .input-form {
-          padding: 1.5rem;
-          background: #1e293b;
-          border-top: 1px solid #334155;
+
+        .input-area {
+          padding: 1.5rem 2rem;
+          background: rgba(15, 23, 42, 0.9);
+          border-top: 1px solid rgba(51, 65, 85, 0.5);
+        }
+
+        .input-wrapper {
           display: flex;
-          gap: 0.75rem;
+          gap: 1rem;
+          background: #020617;
+          border: 1px solid #334155;
+          padding: 0.5rem;
+          border-radius: 12px;
         }
+
         .input-field {
           flex: 1;
-          background: #0f172a;
-          border: 1px solid #334155;
-          padding: 0.75rem 1rem;
-          border-radius: 8px;
-          color: white;
-          outline: none;
-          transition: border-color 0.2s;
-        }
-        .input-field:focus {
-          border-color: #3b82f6;
-          box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.2);
-        }
-        .send-button {
-          background: #3b82f6;
-          color: white;
+          background: transparent;
           border: none;
-          padding: 0.75rem 1.5rem;
+          color: white;
+          padding: 0.75rem;
+          outline: none;
+        }
+
+        .btn-send {
+          background: #3b82f6;
+          border: none;
+          color: white;
+          padding: 0 1.5rem;
           border-radius: 8px;
           font-weight: 600;
           cursor: pointer;
-          transition: background 0.2s, transform 0.1s;
         }
-        .send-button:hover:not(:disabled) {
-          background: #2563eb;
-        }
-        .send-button:active {
-          transform: scale(0.95);
-        }
-        .send-button:disabled {
-          background: #334155;
-          cursor: not-allowed;
+
+        /* Logs Console */
+        .logs-console {
+          height: 150px;
+          background: #000;
+          border-top: 1px solid #334155;
+          padding: 1rem;
+          font-family: 'Fira Code', monospace;
+          font-size: 0.75rem;
+          overflow-y: auto;
+          color: #10b981;
         }
       `}</style>
 
-      <header className="header">
-        <h1 className="text-xl font-bold tracking-tight">Shadow Stack AI</h1>
-        <div className="flex items-center">
-          <span className="status-dot"></span>
-          <span className="text-sm font-medium text-slate-400">
-            {isLoading ? 'Processing' : 'Connected'}
-          </span>
-        </div>
-      </header>
-
-      <div className="messages-container">
-        {messages.map((m) => (
-          <div
-            key={m.id}
-            className={`message ${m.role === 'user' ? 'user-message' : 'ai-message'}`}
-          >
-            <strong>{m.role === 'user' ? 'You' : 'AI'}:</strong>
-            <div className="mt-2 text-slate-300">{m.content}</div>
+      {/* Sidebar: Orchestration */}
+      <aside className="sidebar">
+        <h2 className="text-xl font-bold mb-6 flex items-center gap-2">
+          <span className="w-3 h-3 bg-blue-500 rounded-full animate-pulse"></span>
+          Orchestrator
+        </h2>
+        
+        {phases.map(phase => (
+          <div key={phase.id} className="phase-card">
+            <div className="flex justify-between items-center mb-2">
+              <h3 className="font-semibold text-sm">{phase.title}</h3>
+              <span className={`text-[10px] px-2 py-0.5 rounded ${
+                phase.status === 'COMPLETE' ? 'bg-green-500/20 text-green-400' : 
+                phase.status === 'IN_PROGRESS' ? 'bg-blue-500/20 text-blue-400' : 
+                'bg-slate-500/20 text-slate-400'
+              }`}>
+                {phase.status}
+              </span>
+            </div>
+            {phase.tasks.map((task: any) => (
+              <div key={task.id} className="task-item">
+                <span className="text-slate-300 truncate mr-2" title={task.title}>{task.title}</span>
+                <button 
+                  className="btn-run"
+                  onClick={() => runTask(phase.id, task.id)}
+                >
+                  Run
+                </button>
+              </div>
+            ))}
           </div>
         ))}
-        {isLoading && messages[messages.length - 1]?.role !== 'assistant' && (
-          <div className="ai-message message italic text-slate-400">
-            Shadow AI is thinking...
-          </div>
-        )}
-        <div ref={messagesEndRef}></div>
-      </div>
+      </aside>
 
-      <form className="input-form" onSubmit={handleSubmit}>
-        <input
-          className="input-field"
-          value={input}
-          placeholder="Type a message..."
-          onChange={handleInputChange}
-          disabled={isLoading}
-        />
-        <button className="send-button" type="submit" disabled={isLoading || !input.trim()}>
-          Send
-        </button>
-      </form>
+      {/* Main Content: Chat */}
+      <main className="main-chat">
+        <div className="messages-container">
+          {messages.map((m) => (
+            <div
+              key={m.id}
+              className={`message ${m.role === 'user' ? 'user-message' : 'ai-message'}`}
+            >
+              {m.content}
+            </div>
+          ))}
+          <div ref={messagesEndRef}></div>
+        </div>
+
+        <div className="input-area">
+          <form className="input-wrapper" onSubmit={handleSubmit}>
+            <input
+              className="input-field"
+              value={input}
+              placeholder="Ask Shadow Stack anything..."
+              onChange={handleInputChange}
+            />
+            <button className="btn-send" type="submit" disabled={isLoading}>
+              Send
+            </button>
+          </form>
+        </div>
+
+        {/* Real-time Logs Console */}
+        <div className="logs-console">
+          {logs.map((log, i) => (
+            <div key={i} className={log.level === 'error' ? 'text-red-400' : ''}>
+              [{log.taskId}] {log.line}
+            </div>
+          ))}
+          {logs.length === 0 && <div className="text-slate-600">Waiting for logs...</div>}
+        </div>
+      </main>
     </div>
   );
 }
