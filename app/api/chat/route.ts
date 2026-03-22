@@ -1,18 +1,18 @@
 import { streamText, tool } from 'ai';
-import { createOpenAI } from '@ai-sdk/openai';
 import { z } from 'zod';
+import { getModelProvider, routeModelByTask } from '../../../lib/ai-models';
 
 export const maxDuration = 30;
 
 export async function POST(req: Request) {
   const { messages } = await req.json();
 
-  const openai = createOpenAI({
-    apiKey: process.env.OPENAI_API_KEY,
-  });
+  // Use the models.dev router logic
+  const modelId = routeModelByTask('chat');
+  const model = getModelProvider(modelId);
 
   const result = await streamText({
-    model: openai('gpt-4o-mini'),
+    model,
     messages,
     tools: {
       query_files: tool({

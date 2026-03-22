@@ -52,6 +52,16 @@ app.post('/api/chat', async (req, res, next) => {
   }
 });
 
+app.post('/api/auto-router', async (req, res, next) => {
+  try {
+    const { routeRequest } = await import('./auto-router/index.js');
+    const result = await routeRequest(req.body);
+    res.json(result);
+  } catch (err) {
+    next(err);
+  }
+});
+
 app.post('/api/orchestrator/prompt', async (req, res, next) => {
   try {
     const { text, sessionId } = req.body;

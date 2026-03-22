@@ -1,10 +1,14 @@
 import { generateText } from 'ai';
-import { openai } from '@ai-sdk/openai';
+import { getModelProvider, routeModelByTask } from '../lib/ai-models.ts';
 
 export async function generateGenericText(prompt) {
   try {
+    // Standardized routing for server-side generic requests
+    const modelId = routeModelByTask('chat');
+    const model = getModelProvider(modelId);
+
     const { text } = await generateText({
-      model: openai('gpt-4o-mini'),
+      model,
       prompt: prompt,
     });
     return text;

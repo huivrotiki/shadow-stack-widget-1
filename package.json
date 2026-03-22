@@ -6,7 +6,7 @@
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "api": "node server/index.js",
+    "api": "tsx server/index.js",
     "orchestrator:start": "npm run api & npm run dev"
   },
   "dependencies": {
@@ -20,5 +20,8 @@
     "simple-git": "^3.33.0",
     "winston": "^3.19.0",
     "zod": "^4.3.6"
+  },
+  "devDependencies": {
+    "tsx": "^4.21.0"
   }
 }

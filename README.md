@@ -16,37 +16,52 @@ Shadow Stack v3.2 – AI-powered dev setup autopilot widget (Electron + React + 
 2. Set up environment variables:
    Copy `.env.example` to `.env.local` and add your keys:
    ```bash
-   OPENAI_API_KEY=your_key_here
+   OPENAI_API_KEY=sk-xxxx...
    ```
 
 ### Running Locally
 
-- **Frontend (App Router)**: `npm run dev` (Access at `http://localhost:3000`)
-- **Backend (Express)**: `npm run api` (Access at `http://localhost:3001`)
+- **Unified Launch**: `npm run orchestrator:start`
+- **Frontend Only**: `npm run dev` (Access at `http://localhost:3000`)
+- **Backend Only**: `npm run api` (Access at `http://localhost:3001`)
 
 ---
 
 ## 🧠 AI SDK & models.dev
 
-The project is integrated with [Vercel AI SDK](https://sdk.vercel.ai/) for high-performance LLM interactions.
+This project is powered by [Vercel AI SDK](https://sdk.vercel.ai/) for high-performance LLM interactions and function-calling.
 
 ### Features
 
-- **Streaming Chat**: `/chat` route features a premium UI using `useChat`.
-- **models.dev Router**: Intelligent model selection based on task type.
-- **Express Bridge**: `server/ai-service.js` provides AI capabilities to the Node backend.
+- **Streaming Dashboard**: `/chat` route features a premium UI Dashboard with real-time logs and phase control.
+- **models.dev Router**: Intelligent model selection based on categories (`chat`, `code`, `image`, `logic`).
+- **GitOps Toolset**: AI can autonomously query files and create commits via the integrated tool calling.
+- **Express ESM Integration**: `server/ai-service.js` provides AI capabilities to the backend using modern ESM syntax.
 
-### Model Tiers
+### Model Tiers (models.dev)
 
 We use `lib/ai-models.ts` for structured model selection:
 
-- **Cheap (Fast)**: `gpt-4o-mini` – Default for chat.
-- **Default**: `gpt-4o` – High quality reasoning.
-- **High-Quality**: `o1-mini` – Best for coding and complex logic.
+- **Cheap (Fast)**: `gpt-4o-mini` (0.15$/1M tokens).
+- **Default**: `gpt-4o` (5.00$/1M tokens).
+- **High-Quality**: `o1-mini` (3.00$/1M tokens, Reasoning-heavy).
+- **Image**: `dall-e-3`.
 
-### Demo
+### Type-Safe Model Selection
 
-Visit `/api/demo/models` to see the current routing configuration and available models.
+```typescript
+import { routeModelByTask } from '@/lib/ai-models';
+
+const modelId = routeModelByTask('code'); // returns 'o1-mini'
+```
+
+### Extending Models
+
+To add a new provider (e.g., Anthropic), update `lib/ai-models.ts` with a new `id` and configure the provider instance.
+
+### Demo & Health Check
+
+Visit `/api/demo/models` to perform a real-time status check and view current model routing benchmarks.
 
 ---
 
@@ -54,3 +69,11 @@ Visit `/api/demo/models` to see the current routing configuration and available 
 
 See [PHASES.md](./PHASES.md) for the current progress of the Anti-Gravity Ralph Loop sequences.
 See [AGENTS.md](./AGENTS.md) for the orchestration technical stack details.
+
+---
+
+## 🛡 Security Policy
+
+- No API keys are hardcoded.
+- All secrets are managed via `.env` or Doppler.
+- AI tools have restricted scope to prevent unintended file deletions.
