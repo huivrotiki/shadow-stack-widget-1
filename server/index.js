@@ -1,5 +1,5 @@
-const express = require('express');
 const { runPrompt } = require('./router');
+const { generateGenericText } = require('./ai-service');
 const app = express();
 const port = 3001;
 
@@ -9,6 +9,19 @@ app.post('/api/gitops', (req, res) => {
   const { action, params } = req.body;
   console.log(`GitOps Action: ${action}`, params);
   res.json({ status: 'success', action, params });
+});
+
+/**
+ * AI Chat Endpoint (Vercel AI SDK wrapper for Node)
+ */
+app.post('/api/chat', async (req, res) => {
+  const { prompt } = req.body;
+  try {
+    const text = await generateGenericText(prompt);
+    res.json({ text });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
 });
 
 /**

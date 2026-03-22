@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import { AI_MODELS, routeModelByTask } from '../../../lib/ai-models.ts';
+import { AI_MODELS, routeModelByTask } from '../../../../lib/ai-models';
 
 /**
  * Demo Route: Lists available models and performs a test routing.

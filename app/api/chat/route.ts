@@ -11,10 +11,10 @@ export async function POST(req: Request) {
     apiKey: process.env.OPENAI_API_KEY,
   });
 
-  const result = streamText({
+  const result = await streamText({
     model: openai('gpt-4o-mini'),
     messages,
   });
 
-  return result.toDataStreamResponse();
+  return result.toTextStreamResponse();
 }
