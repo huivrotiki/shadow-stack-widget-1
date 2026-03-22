@@ -39,6 +39,7 @@ export const ROUTE_NAMES = [
   'kimi',
   'claude-premium',
   'vercel-deploy',
+  'meta-escalation',
 ] as const;
 
 export type RouteName = (typeof ROUTE_NAMES)[number];

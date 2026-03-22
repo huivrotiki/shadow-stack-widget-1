@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
 import { z } from 'zod';
-import { routeRequest, getAllUsage } from '../../../server/auto-router/index.js';
+import { routeRequest, getAllUsage, metaEscalate } from '../../../server/auto-router/index.js';
 
 // --- Zod Schemas ---
 
@@ -41,6 +41,7 @@ const HELP_TEXT = `🤖 *Shadow Stack Auto-Router*
 /reset — сброс сессии
 /test-router — тест роутинга (показывает route без вызова LLM)
 /usage — текущие квоты провайдеров
+/escalate — мета-эскалация проблемы (AI chain → human)
 
 Обычный текст → автоматический роутинг:
 • < 80 символов → Ollama qwen2.5-coder:3b (локально)
@@ -133,6 +134,16 @@ export async function POST(req: Request) {
         });
         const msg = `🧪 *Test Router Result*\n\nInput: "${testPrompt}"\nRoute: ${result.route}\nModel: ${result.model}\nProvider: ${result.provider}\nStatus: ${result.status}\nTime: ${result.executionTimeMs}ms\nFallback: ${result.fallbackUsed}`;
         await sendTelegramMessage(chatId, msg);
+        return NextResponse.json({ ok: true });
+      }
+
+      case '/escalate': {
+        const problem = rest || 'Unknown problem — manual escalation requested';
+        await sendTelegramMessage(chatId, '🚨 Запускаю мета-эскалацию...');
+        const escalation = await metaEscalate(problem);
+        const icon = escalation.status === 'resolved' ? '✅' : escalation.status === 'waiting_for_human' ? '⏳' : '❌';
+        const tiers = escalation.attempts.map(a => `${a.success ? '✅' : '❌'} ${a.tier} (${a.durationMs}ms)`).join('\n');
+        await sendTelegramMessage(chatId, `${icon} *Meta-Escalation: ${escalation.status}*\n\nResolved by: ${escalation.resolvedBy}\n\n*Tiers:*\n${tiers}\n\n*Response:*\n${escalation.response.slice(0, 2000)}`);
         return NextResponse.json({ ok: true });
       }
 

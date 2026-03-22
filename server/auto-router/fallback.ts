@@ -130,9 +130,38 @@ export async function executeFallbackCascade(
     }
   }
 
+  // --- Meta-escalation: all providers failed ---
+  logger.warn('[Fallback] All providers failed, triggering meta-escalation');
+  try {
+    const { metaEscalate } = await import('./metaEscalate.js');
+    const escalation = await metaEscalate(
+      `All ${chain.length} providers failed for prompt: "${prompt.slice(0, 200)}...". ` +
+      `Excluded route: ${excludeRoute ?? 'none'}. Cascade exhausted.`,
+    );
+
+    if (escalation.status === 'resolved') {
+      return {
+        route: 'meta-escalation',
+        model: escalation.resolvedBy,
+        provider: 'meta',
+        response: escalation.response,
+      };
+    }
+
+    // waiting_for_human or all_failed — return the escalation message
+    return {
+      route: 'meta-escalation',
+      model: 'human',
+      provider: 'telegram',
+      response: escalation.response,
+    };
+  } catch (metaErr: any) {
+    logger.error(`[Fallback] Meta-escalation also failed: ${metaErr.message}`);
+  }
+
   throw new ProviderError(
     'fallback',
     503,
-    'All providers in fallback cascade failed. Check: Ollama, Antigravity, OpenRouter, API keys.',
+    'All providers + meta-escalation failed. Manual intervention required.',
   );
 }

@@ -62,6 +62,20 @@ app.post('/api/auto-router', async (req, res, next) => {
   }
 });
 
+app.post('/api/meta-escalate', async (req, res, next) => {
+  try {
+    const { metaEscalate } = await import('./auto-router/index.js');
+    const { problem } = req.body;
+    if (!problem || typeof problem !== 'string') {
+      return res.status(400).json({ status: 'error', error: 'Missing "problem" string in body' });
+    }
+    const result = await metaEscalate(problem);
+    res.json(result);
+  } catch (err) {
+    next(err);
+  }
+});
+
 app.get('/api/auto-router/usage', async (req, res, next) => {
   try {
     const { getAllUsage } = await import('./auto-router/index.js');
