@@ -194,9 +194,14 @@ export default function ShadowStackDashboard() {
 
       {/* Sidebar: Orchestration */}
       <aside className="sidebar">
-        <h2 className="text-xl font-bold mb-6 flex items-center gap-2">
-          <span className="w-3 h-3 bg-blue-500 rounded-full animate-pulse"></span>
-          Orchestrator
+        <h2 className="text-xl font-bold mb-6 flex items-center justify-between">
+          <div className="flex items-center gap-2">
+            <span className="w-3 h-3 bg-blue-500 rounded-full animate-pulse"></span>
+            Orchestrator
+          </div>
+          <a href="/agents" className="text-xs bg-slate-800 hover:bg-slate-700 px-2 py-1 rounded border border-slate-700 text-slate-300 no-underline transition-colors">
+            Agents ⚡
+          </a>
         </h2>
         
         {phases.map(phase => (
