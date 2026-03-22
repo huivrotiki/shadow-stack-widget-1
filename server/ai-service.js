@@ -1,11 +1,10 @@
 /**
- * AI Service for Express backend using Vercel AI SDK.
- * Bridging CJS/ESM via dynamic imports for generateText.
+ * AI Service (ESM)
  */
-async function generateGenericText(prompt) {
-  const { generateText } = await import('ai');
-  const { createOpenAI } = await import('@ai-sdk/openai');
+import { generateText } from 'ai';
+import { createOpenAI } from '@ai-sdk/openai';
 
+export async function generateGenericText(prompt) {
   const openai = createOpenAI({
     apiKey: process.env.OPENAI_API_KEY,
   });
@@ -17,5 +16,3 @@ async function generateGenericText(prompt) {
 
   return text;
 }
-
-module.exports = { generateGenericText };

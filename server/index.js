@@ -1,19 +1,29 @@
-const { runPrompt } = require('./router');
-const { generateGenericText } = require('./ai-service');
+import express from 'express';
+import { runPrompt } from './router.js';
+import { generateGenericText } from './ai-service.js';
+import gitops from './gitops-service.js';
+
 const app = express();
 const port = 3001;
 
 app.use(express.json());
 
-app.post('/api/gitops', (req, res) => {
+app.post('/api/gitops', async (req, res) => {
   const { action, params } = req.body;
-  console.log(`GitOps Action: ${action}`, params);
-  res.json({ status: 'success', action, params });
+  
+  if (action === 'queryFiles') {
+    const result = await gitops.queryFiles(params.pattern);
+    return res.json(result);
+  }
+  
+  if (action === 'createCommit') {
+    const result = await gitops.createCommit(params.message, params.files);
+    return res.json(result);
+  }
+
+  res.status(400).json({ status: 'error', error: `Unknown Action: ${action}` });
 });
 
-/**
- * AI Chat Endpoint (Vercel AI SDK wrapper for Node)
- */
 app.post('/api/chat', async (req, res) => {
   const { prompt } = req.body;
   try {
@@ -24,9 +34,6 @@ app.post('/api/chat', async (req, res) => {
   }
 });
 
-/**
- * Orchestrator Endpoint: Routes prompts through opencode SDK with multi-routing logic.
- */
 app.post('/api/orchestrator/prompt', async (req, res) => {
   const { text, sessionId } = req.body;
 
@@ -39,5 +46,5 @@ app.post('/api/orchestrator/prompt', async (req, res) => {
 });
 
 app.listen(port, () => {
-  console.log(`GitOps API & Orchestrator listening at http://localhost:${port}`);
+  console.log(`GitOps API & Orchestrator (ESM) listening at http://localhost:${port}`);
 });

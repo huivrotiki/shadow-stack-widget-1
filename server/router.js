@@ -1,29 +1,25 @@
-const { createOpencodeClient } = require("@opencode-ai/sdk");
+import { createOpencodeClient } from "@opencode-ai/sdk";
 
 /**
- * Multi-router strategy for Shadow Stack Orchestrator.
- * Routes prompts based on task type to different providers/models.
+ * Multi-router strategy (ESM)
  */
-function pickModel(task) {
+export function pickModel(task) {
   const t = task.toLowerCase();
   
   if (t.includes("long context") || task.length > 5000) {
-    // Heavy lifting / long context -> Local
     return { providerID: "local", modelID: "qwen:latest" };
   }
   
   if (t.includes("code") || t.includes("refactor") || t.includes("fix")) {
-    // Coding tasks -> Groq (Llama-3 is fast and competent)
     return { providerID: "groq", modelID: "llama-3-8b" };
   }
   
-  // Default / Universal -> OpenRouter
   return { providerID: "openrouter", modelID: "gpt-4.1-mini" };
 }
 
-async function runPrompt(userPrompt, sessionId = "default-session") {
+export async function runPrompt(userPrompt, sessionId = "default-session") {
   const client = createOpencodeClient({
-    baseUrl: "http://localhost:4096", // Assuming opencode server is running
+    baseUrl: "http://localhost:4096",
   });
 
   const model = pickModel(userPrompt);
@@ -35,7 +31,6 @@ async function runPrompt(userPrompt, sessionId = "default-session") {
       body: {
         model,
         parts: [{ type: "text", text: userPrompt }],
-        // Example of structured output if needed
         format: {
           type: "json_schema",
           schema: {
@@ -56,5 +51,3 @@ async function runPrompt(userPrompt, sessionId = "default-session") {
     throw error;
   }
 }
-
-module.exports = { pickModel, runPrompt };
