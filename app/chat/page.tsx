@@ -14,9 +14,16 @@ declare global {
 }
 
 export default function ShadowStackDashboard() {
-  const { messages, input, setInput, handleSubmit, status } = useChat();
+  const { messages, sendMessage, status } = useChat();
+  const [input, setInput] = useState('');
   const isLoading = status === 'streaming' || status === 'submitted';
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => setInput(e.target.value);
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!input.trim()) return;
+    sendMessage({ prompt: input });
+    setInput('');
+  };
   const [phases, setPhases] = useState<any[]>([]);
   const [logs, setLogs] = useState<{ taskId: string; line: string; level?: string }[]>([]);
   const messagesEndRef = useRef<HTMLDivElement>(null);
