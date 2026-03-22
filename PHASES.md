@@ -12,7 +12,7 @@
 ```mermaid
 pie title Общий прогресс реализации фаз (Количество задач)
     "✅ Готово / В Интеграции (Phase 0-1)" : 8
-    "⏳ Очередь (Phase 2)" : 3
+    "✅ Готово (Phase 2)" : 3
     "⏳ Очередь (Phase 3)" : 2
     "⏳ Очередь (Phase 4)" : 3
     "⏳ Очередь (Phase 5)" : 4
@@ -70,11 +70,11 @@ flowchart TD
 **Расчётное время запуска:** ~2-3 минуты.
 
 | Task ID | Тип | Статус выполнения | Тайминг | Цель проверки |
-|---|---|---|---|---|
+| :--- | :--- | :--- | :--- | :--- |
 | `0.foundation.scan` | `auto (health)` | ✅ DONE | 5s | Проверяет ОС, архитектуру (ARM64/x86), наличие базовых бинарников |
 | `0.mac.bootstrap.xcode` | `auto` | ✅ DONE | 1-2m | Установка Command Line Tools (xcode-select) |
 | `0.mac.bootstrap.brew` | `auto` | ✅ DONE | 1m | Установка Homebrew, если отсутствует |
-| `0.mac.performance.ping`| `auto (health)` | ✅ DONE | 2s | (Factor 12) Базовый чек ресурсов (RAM/CPU) перед стартом |
+| `0.mac.performance.ping` | `auto (health)` | ✅ DONE | 2s | (Factor 12) Базовый чек ресурсов (RAM/CPU) перед стартом |
 
 ### Phase 1: Environment & Repositories (Factors: 2, 3, 5)
 
@@ -82,22 +82,22 @@ flowchart TD
 **Расчётное время запуска:** ~3-5 минут.
 
 | Task ID | Тип | Статус выполнения | Тайминг | Цель проверки |
-|---|---|---|---|---|
+| :--- | :--- | :--- | :--- | :--- |
 | `1.repos.clone` | `auto` | ✅ DONE | 30s | Клон необходимых суб-репозиториев |
 | `1.git.hygiene_check` | `auto (health)` | ✅ DONE | 5s | Линтинг веток, проверка `.gitignore` |
-| `1.node.install_deps` | `auto` | 🔄 IN_PROG | 2m | Установка npm зависимостей |
-| `1.env.check_dotenv` | `manual (health)`| 🔄 IN_PROG | 1m | Проверка `.env` и секретов DOPPLER |
+| `1.node.install_deps` | `auto` | ✅ DONE | 2m | Установка npm зависимостей |
+| `1.env.check_dotenv` | `manual (health)` | ✅ DONE | 1m | Проверка `.env` и секретов DOPPLER |
 
 ### Phase 2: Build, CI/CD & GitOps (Factors: 4, 8)
 
-**Статус:** 🔴 **[TODO]** Очередь.  
+**Статус:** 🟢 **[DONE]** CI/CD настроен.  
 **Расчётное время запуска:** ~5-10 минут.
 
 | Task ID | Тип | Статус выполнения | Тайминг | Цель проверки |
-|---|---|---|---|---|
-| `2.ci.files_present` | `auto` | ⏳ TODO | 10s | Наличие CI workflows (GitHub Actions) |
-| `2.build.vite_check` | `auto` | ⏳ TODO | 2-3m | Проверка сборки UI виджета (`npm run build`) |
-| `2.gitops.describe_flow`| `manual` | ⏳ TODO | 5m | Описание процессов деплоя |
+| :--- | :--- | :--- | :--- | :--- |
+| `2.ci.files_present` | `auto` | ✅ DONE | 10s | Наличие CI workflows (GitHub Actions) |
+| `2.build.next_check` | `auto` | ✅ DONE | 2-3m | Проверка сборки UI виджета (`npm run build`) |
+| `2.gitops.describe_flow` | `manual` | ✅ DONE | 5m | Описание процессов деплоя |
 
 ### Phase 3: DX & Orchestrator UX (Factors: 6, 7, 13)
 
@@ -105,9 +105,9 @@ flowchart TD
 **Расчётное время запуска:** ~5 минут.
 
 | Task ID | Тип | Статус выполнения | Тайминг | Цель проверки |
-|---|---|---|---|---|
+| :--- | :--- | :--- | :--- | :--- |
 | `3.dx.scripts_review` | `auto/manual` | ⏳ TODO | 2m | Ревью `package.json` скриптов |
-| `3.ux.phases_layout_review`| `manual (health)`| ⏳ TODO | 3m | Оценка понятности Bootstrap/Phases UI |
+| `3.ux.phases_layout_review` | `manual (health)` | ⏳ TODO | 3m | Оценка понятности Bootstrap/Phases UI |
 
 ### Phase 4: Observability, Resilience & Security (Factors: 9, 10, 11)
 
@@ -115,9 +115,9 @@ flowchart TD
 **Расчётное время запуска:** ~10 минут.
 
 | Task ID | Тип | Статус выполнения | Тайминг | Цель проверки |
-|---|---|---|---|---|
+| :--- | :--- | :--- | :--- | :--- |
 | `4.logs.format` | `auto` | ⏳ TODO | 1m | Валидация структуры `orchestrator:log` событий |
-| `4.resilience.retry_policy`| `manual (health)`| ⏳ TODO | 5m | Правила retry для Failed задач |
+| `4.resilience.retry_policy` | `manual (health)` | ⏳ TODO | 5m | Правила retry для Failed задач |
 | `4.security.tokens_policy` | `manual` | ⏳ TODO | 4m | Политика хранения секретов, проверка отсутствия хардкода |
 
 ### Phase 5: Documentation & Lock-In (Factors: 14, 15)
@@ -126,8 +126,8 @@ flowchart TD
 **Расчётное время запуска:** ~15-20 минут.
 
 | Task ID | Тип | Статус выполнения | Тайминг | Цель проверки |
-|---|---|---|---|---|
-| `5.docs.phases` | `manual (health)`| 🔄 IN_PROG | 5m | Ревизия файла `PHASES.md` |
+| :--- | :--- | :--- | :--- | :--- |
+| `5.docs.phases` | `manual (health)` | ✅ DONE | 5m | Ревизия файла `PHASES.md` |
 | `5.docs.agents` | `manual` | ⏳ TODO | 5m | Ревизия `AGENTS.md` |
 | `5.docs.runbook` | `manual` | ⏳ TODO | 10m | Создание `RUNBOOK.md` для запуска с нуля |
 | `5.extensibility.check` | `manual` | ⏳ TODO | 2m | Проверка легкости добавления новых задач в UI |
@@ -135,6 +135,7 @@ flowchart TD
 ---
 
 ## 🛠 Заметки и Планы следующих шагов
-- **Сделано (Done):** Подготовлены скрипты проверки Mac (Phase 0), клонирования и базовой валидации. В `PHASES.md` добавлена визуализация и прогресс.
+
+- **Сделано (Done):** Подготовлены скрипты проверки Mac (Phase 0), клонирования и базовой валидации. В `PHASES.md` добавлена визуализация и прогресс. Backend переведен на **ESM (Node.js 22)**. Интегрирована Vercel AI SDK.
 - **Доделать (To-Do):** Связать хэндлеры процессов `npm install` и проверки секретов (Phase 1) через IPC с UI. Настроить Vite-конфиги сборки виджета и CI/CD пайплайны (Phase 2).
 - **Общий Тайминг:** При исправной работе скриптов, полный `Bootstrap` проекта оркестратором с нуля займет машинного времени **~15-20 минут**.
