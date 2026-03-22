@@ -1,0 +1,18 @@
+# PROJECT SECRETS
+
+Secrets are managed via Doppler.
+
+## Secret Names:
+- GITHUB_TOKEN
+- GITHUB_REPO_OWNER
+- GITHUB_REPO_NAME
+- TELEGRAM_BOT_TOKEN
+- TELEGRAM_SECRET
+- OPENAI_API_KEY
+- ANTHROPIC_API_KEY
+- GROQ_API_KEY
+- VERCEL_TOKEN
+- DOPPLER_TOKEN
+- MCP_GITHUB_URL
+
+**STRICT COMPLIANCE:** Never log these values or re-derive them from code.
