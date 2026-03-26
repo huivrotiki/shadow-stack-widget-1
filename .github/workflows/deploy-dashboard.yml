@@ -5,6 +5,7 @@ on:
     branches: [main]
     paths:
       - 'health-dashboard/**'
+  workflow_dispatch:
 
 jobs:
   deploy:
@@ -17,11 +18,36 @@ jobs:
         uses: dopplerhq/cli-action@v3
 
       - name: Deploy to Vercel
+        id: deploy
         run: |
           doppler run --project shadow-stack --config prd -- \
           npx vercel --prod --token "$VERCEL_TOKEN" \
             --scope "$VERCEL_ORG_ID" \
-            --yes
+            --yes 2>&1 | tee deploy.log
+          DEPLOY_URL=$(grep -o 'https://[^ ]*\.vercel\.app' deploy.log | tail -1)
+          echo "url=$DEPLOY_URL" >> $GITHUB_OUTPUT
         working-directory: ./health-dashboard
         env:
           DOPPLER_TOKEN: ${{ secrets.DOPPLER_TOKEN }}
+
+      - name: Notify Telegram on success
+        if: success()
+        run: |
+          curl -s -X POST "https://api.telegram.org/bot$BOT_TOKEN/sendMessage" \
+            -d chat_id="$CHAT_ID" \
+            -d parse_mode="HTML" \
+            -d text="✅ <b>Health Dashboard deployed</b>%0A%0AURL: ${{ steps.deploy.outputs.url }}%0ACommit: <code>${{ github.sha }}</code>%0ABranch: ${{ github.ref_name }}%0ATriggered by: ${{ github.actor }}"
+        env:
+          BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+          CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
+
+      - name: Notify Telegram on failure
+        if: failure()
+        run: |
+          curl -s -X POST "https://api.telegram.org/bot$BOT_TOKEN/sendMessage" \
+            -d chat_id="$CHAT_ID" \
+            -d parse_mode="HTML" \
+            -d text="❌ <b>Health Dashboard deploy FAILED</b>%0ACommit: <code>${{ github.sha }}</code>%0ASee: https://github.com/${{ github.repository }}/actions"
+        env:
+          BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+          CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
