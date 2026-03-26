@@ -1,0 +1,10 @@
+{
+  "branchName": "main",
+  "stories": [
+    {"id": 4, "title": "Activity Log Tab", "passes": false},
+    {"id": 5, "title": "Metrics Tab", "passes": false},
+    {"id": 7, "title": "Config Editor Tab", "passes": false},
+    {"id": 8, "title": "Approvals Queue Tab", "passes": false},
+    {"id": 9, "title": "About / System Info Tab", "passes": false}
+  ]
+}
