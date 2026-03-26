@@ -26,8 +26,6 @@ const TelegramUpdateSchema = z.object({
 
 // --- Constants ---
 
-const COMMANDS = ['/status', '/deploy', '/premium', '/deep', '/grok', '/kimi', '/help', '/reset'] as const;
-
 const HELP_TEXT = `🤖 *Shadow Stack Auto-Router*
 
 Команды:
@@ -56,18 +54,19 @@ async function sendTelegramMessage(chatId: number, text: string): Promise<void> 
     console.error('TELEGRAM_BOT_TOKEN is not set');
     return;
   }
-
-  const truncated = text.slice(0, 4096);
-
-  await fetch(`https://api.telegram.org/bot${token}/sendMessage`, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({
-      chat_id: chatId,
-      text: truncated,
-      parse_mode: 'Markdown',
-    }),
-  });
+  try {
+    await fetch(`https://api.telegram.org/bot${token}/sendMessage`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        chat_id: chatId,
+        text: text.slice(0, 4096),
+        parse_mode: 'Markdown',
+      }),
+    });
+  } catch (err) {
+    console.error('sendTelegramMessage failed:', err);
+  }
 }
 
 // --- Command Parser ---
@@ -78,32 +77,29 @@ function parseCommand(text: string): { command: string | null; rest: string } {
   return { command: match[1], rest: match[2]?.trim() || '' };
 }
 
-// --- Webhook Handler ---
+// --- Background Handler ---
+// Runs after 200 is returned to Telegram — never blocks the response.
 
-export async function POST(req: Request) {
+async function handleUpdate(body: unknown): Promise<void> {
+  let update: z.infer<typeof TelegramUpdateSchema>;
+
   try {
-    // Security: verify webhook secret
-    const secret = req.headers.get('x-telegram-bot-api-secret-token');
-    const expectedSecret = process.env.TELEGRAM_SECRET;
-    if (expectedSecret && secret !== expectedSecret) {
-      return NextResponse.json({ ok: false }, { status: 403 });
-    }
+    update = TelegramUpdateSchema.parse(body);
+  } catch (err) {
+    console.error('Invalid Telegram update:', err);
+    return;
+  }
 
-    const body = await req.json();
-    const update = TelegramUpdateSchema.parse(body);
+  if (!update.message?.text) return;
 
-    if (!update.message?.text) {
-      return NextResponse.json({ ok: true });
-    }
+  const chatId = update.message.chat.id;
+  const { command, rest } = parseCommand(update.message.text);
 
-    const chatId = update.message.chat.id;
-    const { command, rest } = parseCommand(update.message.text);
-
-    // Handle commands
+  try {
     switch (command) {
       case '/help': {
         await sendTelegramMessage(chatId, HELP_TEXT);
-        return NextResponse.json({ ok: true });
+        break;
       }
 
       case '/status': {
@@ -112,18 +108,19 @@ export async function POST(req: Request) {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ text: 'status', sessionId: 'telegram' }),
+            signal: AbortSignal.timeout(10_000),
           });
           const data = await resp.json();
-          await sendTelegramMessage(chatId, `📊 Status: ${JSON.stringify(data, null, 2)}`);
+          await sendTelegramMessage(chatId, `📊 Status:\n\`\`\`\n${JSON.stringify(data, null, 2).slice(0, 3500)}\n\`\`\``);
         } catch {
           await sendTelegramMessage(chatId, '⚠️ Orchestrator недоступен');
         }
-        return NextResponse.json({ ok: true });
+        break;
       }
 
       case '/reset': {
         await sendTelegramMessage(chatId, '🔄 Сессия сброшена');
-        return NextResponse.json({ ok: true });
+        break;
       }
 
       case '/test-router': {
@@ -132,9 +129,18 @@ export async function POST(req: Request) {
           text: testPrompt,
           sessionId: `tg-test-${chatId}`,
         });
-        const msg = `🧪 *Test Router Result*\n\nInput: "${testPrompt}"\nRoute: ${result.route}\nModel: ${result.model}\nProvider: ${result.provider}\nStatus: ${result.status}\nTime: ${result.executionTimeMs}ms\nFallback: ${result.fallbackUsed}`;
+        const msg = [
+          `🧪 *Test Router Result*`,
+          `Input: "${testPrompt}"`,
+          `Route: ${result.route}`,
+          `Model: ${result.model}`,
+          `Provider: ${result.provider}`,
+          `Status: ${result.status}`,
+          `Time: ${result.executionTimeMs}ms`,
+          `Fallback: ${result.fallbackUsed}`,
+        ].join('\n');
         await sendTelegramMessage(chatId, msg);
-        return NextResponse.json({ ok: true });
+        break;
       }
 
       case '/escalate': {
@@ -142,26 +148,35 @@ export async function POST(req: Request) {
         await sendTelegramMessage(chatId, '🚨 Запускаю мета-эскалацию...');
         const escalation = await metaEscalate(problem);
         const icon = escalation.status === 'resolved' ? '✅' : escalation.status === 'waiting_for_human' ? '⏳' : '❌';
-        const tiers = escalation.attempts.map(a => `${a.success ? '✅' : '❌'} ${a.tier} (${a.durationMs}ms)`).join('\n');
-        await sendTelegramMessage(chatId, `${icon} *Meta-Escalation: ${escalation.status}*\n\nResolved by: ${escalation.resolvedBy}\n\n*Tiers:*\n${tiers}\n\n*Response:*\n${escalation.response.slice(0, 2000)}`);
-        return NextResponse.json({ ok: true });
+        const tiers = escalation.attempts.map((a: any) => `${a.success ? '✅' : '❌'} ${a.tier} (${a.durationMs}ms)`).join('\n');
+        await sendTelegramMessage(chatId, [
+          `${icon} *Meta-Escalation: ${escalation.status}*`,
+          `Resolved by: ${escalation.resolvedBy}`,
+          ``,
+          `*Tiers:*`,
+          tiers,
+          ``,
+          `*Response:*`,
+          escalation.response.slice(0, 2000),
+        ].join('\n'));
+        break;
       }
 
       case '/usage': {
         const usage = getAllUsage();
-        const lines = Object.entries(usage).map(([provider, data]) => {
-          const bar = '█'.repeat(Math.round(data.percent / 10)) + '░'.repeat(10 - Math.round(data.percent / 10));
+        const lines = Object.entries(usage).map(([provider, data]: [string, any]) => {
+          const filled = Math.round(data.percent / 10);
+          const bar = '█'.repeat(filled) + '░'.repeat(10 - filled);
           return `${provider}: ${bar} ${data.count}/${data.limit} (${data.percent}%)`;
         });
         await sendTelegramMessage(chatId, `📊 *Provider Usage*\n\n${lines.join('\n')}`);
-        return NextResponse.json({ ok: true });
+        break;
       }
 
       default: {
-        // Route through Auto-Router
+        // Auto-route all other messages and unknown commands
         const prompt = rest || update.message.text;
 
-        // Send "processing" for long operations
         if (command === '/deploy' || command === '/premium') {
           await sendTelegramMessage(chatId, '⏳ Обработка...');
         }
@@ -174,20 +189,48 @@ export async function POST(req: Request) {
         });
 
         const statusIcon = result.status === 'success' ? '✅' : result.status === 'fallback' ? '🔄' : '❌';
-        const header = `${statusIcon} [${result.route}] ${result.model} (${result.executionTimeMs}ms)`;
-        const message = `${header}\n\n${result.response}`;
-
-        await sendTelegramMessage(chatId, message);
-        return NextResponse.json({ ok: true });
+        await sendTelegramMessage(
+          chatId,
+          `${statusIcon} [${result.route}] ${result.model} (${result.executionTimeMs}ms)\n\n${result.response}`,
+        );
+        break;
       }
     }
   } catch (err: any) {
-    console.error('Telegram webhook error:', err);
-
-    if (err.name === 'ZodError') {
-      return NextResponse.json({ ok: false, error: 'Invalid update format' }, { status: 400 });
+    console.error('handleUpdate error:', err);
+    try {
+      await sendTelegramMessage(chatId, `❌ Ошибка: ${err?.message ?? 'unknown'}`);
+    } catch {
+      // ignore send errors in error handler
     }
-
-    return NextResponse.json({ ok: false, error: err.message }, { status: 500 });
   }
+}
+
+// --- Webhook Entry Point ---
+// Returns 200 immediately so Telegram doesn't retry.
+// All processing happens in background via queueMicrotask.
+
+export async function POST(req: Request) {
+  // Security: verify webhook secret
+  const secret = req.headers.get('x-telegram-bot-api-secret-token');
+  const expectedSecret = process.env.TELEGRAM_SECRET;
+  if (expectedSecret && secret !== expectedSecret) {
+    return new Response('Forbidden', { status: 403 });
+  }
+
+  let body: unknown;
+  try {
+    body = await req.json();
+  } catch {
+    return new Response('Bad Request', { status: 400 });
+  }
+
+  // Fire-and-forget: process in background, respond immediately
+  queueMicrotask(() => {
+    handleUpdate(body).catch((err) =>
+      console.error('Unhandled error in handleUpdate:', err)
+    );
+  });
+
+  return new Response('ok', { status: 200 });
 }
