@@ -13,11 +13,15 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
+      - name: Install Doppler CLI
+        uses: dopplerhq/cli-action@v3
+
       - name: Deploy to Vercel
-        uses: amondnet/vercel-action@v25
-        with:
-          vercel-token: ${{ secrets.VERCEL_TOKEN }}
-          vercel-org-id: ${{ secrets.VERCEL_ORG_ID }}
-          vercel-project-id: ${{ secrets.VERCEL_PROJECT_ID }}
-          working-directory: ./health-dashboard
-          vercel-args: '--prod'
+        run: |
+          doppler run --project shadow-stack --config prd -- \
+          npx vercel --prod --token "$VERCEL_TOKEN" \
+            --scope "$VERCEL_ORG_ID" \
+            --yes
+        working-directory: ./health-dashboard
+        env:
+          DOPPLER_TOKEN: ${{ secrets.DOPPLER_TOKEN }}
